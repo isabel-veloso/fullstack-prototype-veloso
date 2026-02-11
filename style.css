@@ -1,0 +1,26 @@
+/* PHASE 1: Core Visibility Rules */
+.page { 
+    display: none; 
+}
+
+.page.active { 
+    display: block; 
+}
+
+/* Auth State Visibility - Controls Nav Links */
+body.not-authenticated .role-logged-in { 
+    display: none; 
+}
+
+body.authenticated .role-logged-out { 
+    display: none; 
+}
+
+/* Admin Role Logic */
+.role-admin { 
+    display: none; 
+}
+
+body.is-admin .role-admin { 
+    display: block; 
+}
