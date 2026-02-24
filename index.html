@@ -35,7 +35,7 @@
                     </li>
 
                     <li class="nav-item dropdown role-logged-in">
-                        <a class="nav-link dropdown-toggle" href="#" id="adminDrop" data-bs-toggle="dropdown">Admin</a>
+                        <a class="nav-link dropdown-toggle" href="#" id="nav-user-name" data-bs-toggle="dropdown">User</a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="#/profile">Profile</a></li>
                             <li><a class="dropdown-item role-admin" href="#/employees">Employees</a></li>
@@ -60,7 +60,6 @@
                 <div class="card-body">
                     <h1 class="card-title">Welcome to Full-Stack App</h1>
                     <p class="lead">A static prototype before backend integration. Simulates:</p>
-                    
                     <ul>
                         <li>Email registration + fake verification</li>
                         <li>Login with JWT-like token simulation</li>
@@ -73,6 +72,23 @@
                     </div>
                     
                     <a href="#/register" class="btn btn-primary">Get Started →</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- VERIFY EMAIL PAGE --> 
+        <section id="verify-email-page" class="page">
+            <div class="card mx-auto shadow-sm" >
+                <div class="card-body">
+                    <h3 class="mb-4">Verify Your Email</h3>
+                    <div class="alert alert-success" role="alert">
+                        ✅ A verification link has been sent to <strong id="display-unverified-email"></strong>.
+                    </div>
+                    <p class="text-secondary small">For demo purposes, click below to simulate verification:</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" onclick="simulateVerification()">✅ Simulate Email Verification</button>
+                        <a href="#/login" class="btn btn-outline-secondary">Go to Login</a>
+                    </div>
                 </div>
             </div>
         </section>
@@ -145,6 +161,240 @@
                 </div>
             </div>
         </section>
+
+        <section id="accounts-page" class="page">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>Accounts</h3>
+                <button class="btn btn-success" onclick="toggleAccountForm()">+ Add Account</button>
+            </div>
+
+            <div class="table-responsive card shadow-sm mb-4">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Verified</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accounts-table-body">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="account-form-container" class="card shadow-sm d-none">
+                <div class="card-header fw-bold">Add/Edit Account</div>
+                <div class="card-body">
+                    <form id="account-form">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">First Name</label>
+                                <input type="text" id="acc-firstname" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Last Name</label>
+                                <input type="text" id="acc-lastname" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            <input type="email" id="acc-email" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="acc-password" class="form-control" minlength="6" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Role</label>
+                            <select id="acc-role" class="form-select">
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" id="acc-verified" class="form-check-input">
+                            <label class="form-check-label">Verified</label>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleAccountForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="requests-page" class="page">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">My Requests</h2>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#requestModal">+ New Request</button>
+            </div>
+
+            <div id="empty-requests-view" class="mt-4">
+                <p class="text-secondary">You have no requests yet.</p>
+                <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#requestModal">Create One</button>
+            </div>
+
+            <div id="requests-table-container" class="card shadow-sm" style="display: none;">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Items</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="requests-table-body">
+                        </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="modal fade" id="requestModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content shadow-lg">
+                    <div class="modal-header border-0">
+                        <h5 class="modal-title fw-bold">New Request</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="new-request-form">
+                            <div class="mb-4">
+                                <label class="form-label text-secondary small fw-bold">Type</label>
+                                <select id="req-type" class="form-select" required>
+                                    <option value="Equipment">Equipment</option>
+                                    <option value="Leave">Leave</option>
+                                    <option value="Resources">Resources</option>
+                                </select>
+                            </div>
+                            
+                            <label class="form-label text-secondary small fw-bold">Items</label>
+                            <div id="dynamic-items-container">
+                                <div class="input-group mb-2 item-row">
+                                    <input type="text" class="form-control item-name" placeholder="Item name" required>
+                                    <input type="number" class="form-control item-qty text-center" value="1" style="max-width: 60px;" required>
+                                    <button type="button" class="btn btn-outline-secondary add-item-btn" title="Add Item">+</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="submit" form="new-request-form" class="btn btn-primary w-100 fw-bold">Submit Request</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <section id="employees-page" class="page">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3>Employees</h3>
+                <button class="btn btn-success" onclick="toggleEmployeeForm()">+ Add Employee</button>
+            </div>
+
+            <div class="table-responsive card shadow-sm mb-4">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Position</th>
+                            <th>Dept</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="employees-table-body">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="employee-form-container" class="card shadow-sm d-none">
+                <div class="card-header fw-bold">Add/Edit Employee</div>
+                <div class="card-body">
+                    <form id="employee-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Employee ID</label>
+                            <input type="text" id="emp-id" class="form-control" placeholder="e.g. EMP-101" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">User Email</label>
+                            <input type="email" id="emp-email" class="form-control" placeholder="Must match an existing account email" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Position</label>
+                            <input type="text" id="emp-position" class="form-control" placeholder="e.g. Senior Dev" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Department</label>
+                            <select id="emp-dept" class="form-select" required>
+                                </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Hire Date</label>
+                            <input type="date" id="emp-hire-date" class="form-control" required>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save Employee</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleEmployeeForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <section id="departments-page" class="page">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="fw-bold">Departments</h2>
+                <button class="btn btn-success" onclick="toggleDeptForm()">+ Add Department</button>
+            </div>
+
+            <div class="table-responsive card shadow-sm p-3 mb-4">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="fw-bold">Name</th>
+                            <th class="fw-bold">Description</th>
+                            <th class="fw-bold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dept-list-body">
+                        </tbody>
+                </table>
+            </div>
+
+            <div id="dept-form-container" class="card shadow-sm d-none">
+                <div class="card-header fw-bold">Add/Edit Department</div>
+                <div class="card-body">
+                    <form id="dept-form">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Name</label>
+                            <input type="text" id="new-dept-name" class="form-control" placeholder="e.g. Engineering" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">Description</label>
+                            <input type="text" id="new-dept-desc" class="form-control" placeholder="e.g. Software team" required>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleDeptForm()">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <div class="toast-container position-fixed top-0 start-50 translate-middle-x p-3" style="z-index: 2000;">
+            <div id="liveToast" class="toast align-items-center border-0 shadow-lg" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 300px;">
+                <div id="toast-styling" class="d-flex align-items-center p-2 rounded">
+                    <div class="toast-body flex-grow-1 fw-bold" id="toast-message">
+                        </div>
+                    <span id="toast-icon" class="me-3 fs-5"></span>
+                    <button type="button" class="btn-close me-2" data-bs-dismiss="toast" aria-label="Close"></button>
+                </div>
+            </div>
+        </div>
         
 
     <!-- Bootstrap JavaScript Bundle -->

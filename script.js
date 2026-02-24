@@ -1,54 +1,585 @@
-// Phase 2: Core Routing Variables
-let currentUser = null; // [cite: 186]
+// ==========================================
+// Phase 2: Core Routing & Auth Variables
+// ==========================================
+let currentUser = null;
+const STORAGE_KEY = 'ipt_demo_v1'; 
 
-// Phase 2: handleRouting function
+// ==========================================
+// Phase 4: Data Persistence (Local Storage)
+// ==========================================
+
+window.db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
+    accounts: [
+        { id: 1, firstName: 'Admin', lastName: 'User', email: 'admin@example.com', password: 'Password123!', role: 'admin', verified: true }
+    ],
+    employees: [],
+    departments: [
+        { name: 'Engineering', desc: 'Software team' },
+        { name: 'HR', desc: 'Human Resources' }
+    ],
+    requests: []
+};
+
+function saveToStorage() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(window.db));
+}
+
+// ==========================================
+// Phase 2 & 3: Routing & Auth State Management
+// ==========================================
+
+/**
+ * handleRouting(): The "Bouncer".
+ * We catch #/logout at the very beginning to fix the redirect issue.
+ */
 function handleRouting() {
-    const hash = window.location.hash || '#/'; // [cite: 189]
-
-    // 1. Hide all page elements first [cite: 190]
-    document.querySelectorAll('.page').forEach(page => {
-        page.classList.remove('active');
-    });
-
-    // 2. Show ONLY the matching page [cite: 191]
-    if (hash === '#/' || hash === '') {
-        document.getElementById('home-page').classList.add('active');
-    } else if (hash === '#/login') {
-        document.getElementById('login-page').classList.add('active');
-    } else if (hash === '#/register') {
-        document.getElementById('register-page').classList.add('active');
-    } else if (hash === '#/profile') {
-        // Blocks unauthenticated users from seeing the profile [cite: 192]
-        if (!currentUser) {
-            window.location.hash = '#/login';
-        } else {
-            document.getElementById('profile-page').classList.add('active');
-        }
-    } else if (hash === '#/logout') {
+    const hash = window.location.hash || '#/';
+    
+    // 1. Catch Logout immediately
+    if (hash === '#/logout') {
         handleLogout();
+        return;
+    }
+
+    // 2. REVERSE BOUNCER: If logged in, don't let them see login/register
+    if (currentUser && (hash === '#/login' || hash === '#/register')) {
+        window.location.hash = '#/profile';
+        return;
+    }
+
+    // 3. SECURITY CHECK: Validate permissions BEFORE showing the page
+    const adminPages = ['#/employees', '#/accounts', '#/departments'];
+    const userPages = ['#/profile', '#/requests'];
+
+    if (userPages.includes(hash) && !currentUser) {
+        window.location.hash = '#/login';
+        return;
+    }
+    
+    if (adminPages.includes(hash) && (!currentUser || currentUser.role !== 'admin')) {
+        window.location.hash = '#/';
+        return;
+    }
+
+    // 4. NAVIGATION: Now that we know they are allowed, show the page
+    const pages = document.querySelectorAll('.page');
+    pages.forEach(p => p.classList.remove('active'));
+
+    const routeMap = {
+        '#/': 'home-page',
+        '#/login': 'login-page',
+        '#/register': 'register-page',
+        '#/verify-email': 'verify-email-page',
+        '#/profile': 'profile-page',
+        '#/employees': 'employees-page',
+        '#/accounts': 'accounts-page',
+        '#/departments': 'departments-page',
+        '#/requests': 'requests-page'
+    };
+
+    const targetId = routeMap[hash] || 'home-page';
+    const targetElement = document.getElementById(targetId);
+    
+    if (targetElement) {
+        targetElement.classList.add('active');
+
+        // 5. RENDER TRIGGER: Populate tables
+        if (hash === '#/profile') renderProfile();
+        if (hash === '#/accounts') renderAccounts(); 
+        if (hash === '#/departments') renderDepartments();
+        if (hash === '#/employees') renderEmployees(); 
+        if (hash === '#/requests') renderRequests(); 
     }
 }
 
-// Phase 3E: Logout Logic [cite: 226]
-function handleLogout() {
-    localStorage.removeItem('auth_token'); // [cite: 227]
-    setAuthState(false); // [cite: 228]
-    window.location.hash = '#/'; // [cite: 229]
-}
 
-// Phase 3D placeholder
 function setAuthState(isAuth, user = null) {
     const body = document.body;
-    if (isAuth) {
+    const navName = document.getElementById('nav-user-name'); 
+    
+    currentUser = user; 
+    if (isAuth && user) {
+        // Toggle body classes for navbar visibility
         body.classList.replace('not-authenticated', 'authenticated');
+        
+        if (user.role === 'admin') {
+            body.classList.add('is-admin');
+            if (navName) navName.innerText = "Admin"; 
+        } else {
+            if (navName) navName.innerText = user.firstName; 
+        }
     } else {
+        // Logout / Reset Logic
         body.classList.replace('authenticated', 'not-authenticated');
         body.classList.remove('is-admin');
+        if (navName) navName.innerText = "User";
+        currentUser = null;
     }
 }
 
-// Listen for hash changes [cite: 194]
-window.addEventListener('hashchange', handleRouting);
+/**
+ * handleLogout(): Clears session and forces redirect to Home hash
+ */
+function handleLogout() {
+    // Requirement: Clear auth_token from localStorage
+    localStorage.removeItem('auth_token');
+    
+    // Requirement: Call setAuthState(false)
+    setAuthState(false);
+    
+    // Requirement: Navigate to home
+    window.location.hash = '#/'; 
+    
+    showToast("Logged out successfully", "info");
+}
 
-// Initialize on page load [cite: 195]
-handleRouting();
+// ==========================================
+// Phase 3: Registration & Login Logic
+// ==========================================
+
+const regForm = document.getElementById('register-form');
+if (regForm) {
+    regForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('reg-email').value;
+        if (window.db.accounts.find(a => a.email === email)) {
+            return showToast("Email already exists!", "danger");
+        }
+        window.db.accounts.push({
+            id: Date.now(),
+            firstName: document.getElementById('reg-firstname').value,
+            lastName: document.getElementById('reg-lastname').value,
+            email: email,
+            password: document.getElementById('reg-password').value,
+            role: 'user', verified: false 
+        });
+        saveToStorage();
+        localStorage.setItem('unverified_email', email);
+        window.location.hash = '#/verify-email';
+    });
+}
+
+function simulateVerification() {
+    const email = localStorage.getItem('unverified_email');
+    const account = window.db.accounts.find(a => a.email === email);
+    if (account) {
+        account.verified = true;
+        saveToStorage();
+        sessionStorage.setItem('show_verified_alert', 'true');
+        window.location.hash = '#/login';
+    }
+}
+
+const loginForm = document.getElementById('login-form');
+if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const emailInput = document.getElementById('login-email').value;
+        const passwordInput = document.getElementById('login-password').value;
+
+        // Requirement: Find account with matching email, password, and verified: true
+        const user = window.db.accounts.find(u => 
+            u.email === emailInput && 
+            u.password === passwordInput && 
+            u.verified === true
+        );
+
+        if (user) {
+            localStorage.setItem('auth_token', user.email); 
+            setAuthState(true, user);
+            
+            // 1. Show the Toast first
+            showToast(`Welcome back, ${user.firstName}!`, "success");
+            
+            // 2. Delay the redirect slightly (100ms is enough to be invisible to users but helps JS)
+            setTimeout(() => {
+                window.location.hash = '#/profile'; 
+            }, 150);
+        }
+    });
+}
+
+// ==========================================
+// Phase 6: Admin Management (Inline Forms)
+// ==========================================
+
+// --- Accounts ---
+
+function renderAccounts() {
+    const tbody = document.getElementById('accounts-table-body');
+    if (!tbody) return;
+
+    if (window.db.accounts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3">No accounts found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = window.db.accounts.map(acc => `
+        <tr>
+            <td>${acc.firstName} ${acc.lastName}</td>
+            <td>${acc.email}</td>
+            <td><span class="badge bg-info">${acc.role}</span></td>
+            <td>${acc.verified ? '✅' : '❌'}</td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="editAccount(${acc.id})">Edit</button>
+                <button class="btn btn-sm btn-outline-warning me-1" onclick="resetPassword(${acc.id})">Reset PW</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteAccount(${acc.id})">Delete</button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function toggleAccountForm() {
+    const container = document.getElementById('account-form-container');
+    if (!container) return;
+    
+    container.classList.toggle('d-none');
+    
+    // Reset form if we just closed it
+    if (container.classList.contains('d-none')) {
+        const form = document.getElementById('account-form');
+        form.reset();
+        delete form.dataset.editingId;
+    }
+}
+
+
+
+function editAccount(id) {
+    const acc = window.db.accounts.find(a => a.id === id);
+    if (!acc) return;
+
+    // Show form
+    const container = document.getElementById('account-form-container');
+    container.classList.remove('d-none');
+
+    // Pre-fill fields
+    document.getElementById('acc-firstname').value = acc.firstName;
+    document.getElementById('acc-lastname').value = acc.lastName;
+    document.getElementById('acc-email').value = acc.email;
+    document.getElementById('acc-role').value = acc.role;
+    document.getElementById('acc-verified').checked = acc.verified;
+    
+    // Hide password field during edit (optional security preference) or leave empty
+    document.getElementById('acc-password').removeAttribute('required');
+
+    // Store the ID we are editing in a data attribute
+    document.getElementById('account-form').dataset.editingId = id;
+    
+    // Scroll to form
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+
+function resetPassword(id) {
+    // Prevent self-reset via this method to force standard profile flow
+    if (currentUser && id === currentUser.id) {
+        return showToast("Please use the Profile page to change your own password.", "info");
+    }
+
+    const newPassword = prompt("Enter new password for this account (min 6 characters):");
+    
+    if (newPassword === null) return; // User cancelled
+
+    if (newPassword.length < 6) {
+        return showToast("Error: Password must be at least 6 characters.", "danger");
+    }
+
+    const acc = window.db.accounts.find(a => a.id === id);
+    if (acc) {
+        acc.password = newPassword;
+        saveToStorage();
+        showToast(`Password for ${acc.email} has been updated.`, "success");
+    }
+}
+
+function deleteAccount(id) {
+    // Requirement: Prevent self-deletion
+    if (currentUser && id === currentUser.id) {
+        return showToast("Safety Error: You cannot delete the account you are currently logged into!", "danger");
+    }
+
+    if (confirm("Are you sure you want to delete this account? This cannot be undone.")) {
+        window.db.accounts = window.db.accounts.filter(a => a.id !== id);
+        saveToStorage();
+        renderAccounts();
+        showToast("Account removed successfully.", "info");
+    }
+}
+
+const accForm = document.getElementById('account-form');
+if (accForm) {
+    accForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        
+        const editingId = e.target.dataset.editingId;
+        const email = document.getElementById('acc-email').value;
+
+        if (editingId) {
+            // UPDATE LOGIC
+            const acc = window.db.accounts.find(a => a.id == editingId);
+            if (acc) {
+                acc.firstName = document.getElementById('acc-firstname').value;
+                acc.lastName = document.getElementById('acc-lastname').value;
+                acc.email = email;
+                acc.role = document.getElementById('acc-role').value;
+                acc.verified = document.getElementById('acc-verified').checked;
+                
+                const pass = document.getElementById('acc-password').value;
+                if (pass) acc.password = pass;
+                showToast("Account updated!", "success");
+            }
+        } else {
+            // CREATE LOGIC
+            if (window.db.accounts.find(a => a.email === email)) {
+                return showToast("Error: Email already exists.", "danger");
+            }
+
+            window.db.accounts.push({
+                id: Date.now(),
+                firstName: document.getElementById('acc-firstname').value,
+                lastName: document.getElementById('acc-lastname').value,
+                email: email,
+                password: document.getElementById('acc-password').value || "Password123!",
+                role: document.getElementById('acc-role').value,
+                verified: document.getElementById('acc-verified').checked
+            });
+            showToast("Account created!", "success");
+        }
+
+        saveToStorage(); // Save to LocalStorage
+        renderAccounts(); // CRITICAL: Update the table view
+        toggleAccountForm(); // Hide the form card
+    });
+}
+
+// --- Departments ---
+function toggleDeptForm() {
+    document.getElementById('dept-form-container').classList.toggle('d-none');
+}
+
+function renderDepartments() {
+    const tableBody = document.getElementById('dept-list-body');
+    if (!tableBody) return;
+    tableBody.innerHTML = window.db.departments.map((dept, index) => `
+        <tr>
+            <td class="fw-semibold">${dept.name}</td>
+            <td class="text-secondary">${dept.desc}</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="editDepartment(${index})">Edit</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="removeDepartment(${index})">Delete</button>
+            </td>
+        </tr>`).join('');
+}
+
+
+function removeDepartment(index) {
+    if (confirm("Remove this department?")) {
+        window.db.departments.splice(index, 1);
+        saveToStorage();
+        renderDepartments();
+        showToast("Department removed", "info");
+    }
+}
+
+const dForm = document.getElementById('dept-form');
+if (dForm) {
+    dForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        window.db.departments.push({
+            name: document.getElementById('new-dept-name').value,
+            desc: document.getElementById('new-dept-desc').value
+        });
+        saveToStorage();
+        showToast("Department added successfully!", "success");
+        e.target.reset();
+        toggleDeptForm();
+        renderDepartments();
+    });
+}
+
+// --- Employees ---
+function toggleEmployeeForm() {
+    const container = document.getElementById('employee-form-container');
+    container.classList.toggle('d-none');
+    if (!container.classList.contains('d-none')) {
+        const deptSelect = document.getElementById('emp-dept');
+        deptSelect.innerHTML = window.db.departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+    }
+}
+
+function renderEmployees() {
+    const tbody = document.getElementById('employees-table-body');
+    if (!tbody) return;
+    if (window.db.employees.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-secondary py-3">No employees.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = window.db.employees.map(emp => `
+        <tr>
+            <td>${emp.id}</td>
+            <td>${emp.name}</td>
+            <td>${emp.position}</td>
+            <td><span class="badge bg-secondary">${emp.dept}</span></td>
+            <td><button class="btn btn-sm btn-outline-danger" onclick="deleteEmployee('${emp.id}')">Remove</button></td>
+        </tr>`).join('');
+}
+
+function deleteEmployee(id) {
+    if (confirm("Remove employee record?")) {
+        window.db.employees = window.db.employees.filter(e => e.id !== id);
+        saveToStorage();
+        renderEmployees();
+        showToast("Employee removed", "info");
+    }
+}
+
+const eForm = document.getElementById('employee-form');
+if (eForm) {
+    eForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const email = document.getElementById('emp-email').value;
+        const account = window.db.accounts.find(a => a.email === email);
+        if (!account) return showToast("Error: Account email not found!", "danger");
+
+        window.db.employees.push({
+            id: document.getElementById('emp-id').value,
+            name: `${account.firstName} ${account.lastName}`,
+            email: email,
+            position: document.getElementById('emp-position').value,
+            dept: document.getElementById('emp-dept').value,
+            hireDate: document.getElementById('emp-hire-date').value
+        });
+        saveToStorage();
+        showToast("Employee record created!", "success");
+        e.target.reset();
+        toggleEmployeeForm();
+        renderEmployees(); 
+    });
+}
+
+// ==========================================
+// Phase 5 & 7: User Content
+// ==========================================
+
+function renderProfile() {
+    const container = document.getElementById('profile-page');
+    if (!currentUser) return;
+    container.innerHTML = `
+        <h3>My Profile</h3>
+        <div class="card shadow-sm" style="max-width: 500px;">
+            <div class="card-body">
+                <h5 class="card-title fw-bold">${currentUser.firstName} ${currentUser.lastName}</h5>
+                <p><strong>Email:</strong> ${currentUser.email}<br>
+                <strong>Role:</strong> ${currentUser.role}</p>
+                <button class="btn btn-outline-primary btn-sm" onclick="showToast('Feature not implemented yet', 'info')">Edit Profile</button>
+            </div>
+        </div>
+    `;
+}
+
+function renderRequests() {
+    const tableContainer = document.getElementById('requests-table-container');
+    const tableBody = document.getElementById('requests-table-body');
+    const myData = window.db.requests.filter(r => r.employeeEmail === currentUser.email); 
+    
+    document.getElementById('empty-requests-view').style.display = myData.length === 0 ? 'block' : 'none';
+    tableContainer.style.display = myData.length === 0 ? 'none' : 'block';
+
+    if (tableBody) {
+        tableBody.innerHTML = myData.map(req => {
+            let badge = req.status === 'Approved' ? 'bg-success' : req.status === 'Rejected' ? 'bg-danger' : 'bg-warning';
+            const items = req.items.map(i => `${i.name} (${i.qty})`).join(', ');
+            return `<tr><td>${req.date}</td><td>${req.type}</td><td><small>${items}</small></td>
+                    <td><span class="badge ${badge}">${req.status}</span></td></tr>`;
+        }).join('');
+    }
+}
+
+// Requisition Builder Fields
+document.addEventListener('click', (e) => {
+    const container = document.getElementById('dynamic-items-container');
+    if (!container) return;
+    if (e.target.classList.contains('add-item-btn')) {
+        e.preventDefault();
+        const newRow = document.createElement('div');
+        newRow.className = 'input-group mb-2 item-row';
+        newRow.innerHTML = `<input type="text" class="form-control item-name" placeholder="Item name" required>
+            <input type="number" class="form-control item-qty text-center" value="1" style="max-width: 60px;" required>
+            <button type="button" class="btn btn-outline-danger remove-item-btn">×</button>`;
+        container.appendChild(newRow);
+    }
+    if (e.target.classList.contains('remove-item-btn')) e.target.closest('.item-row').remove();
+});
+
+const rForm = document.getElementById('new-request-form');
+if (rForm) {
+    rForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        window.db.requests.push({
+            id: Date.now(),
+            date: new Date().toLocaleDateString(),
+            type: document.getElementById('req-type').value,
+            items: Array.from(document.querySelectorAll('.item-row')).map(row => ({
+                name: row.querySelector('.item-name').value,
+                qty: row.querySelector('.item-qty').value
+            })),
+            status: 'Pending',
+            employeeEmail: currentUser.email
+        });
+        saveToStorage();
+        bootstrap.Modal.getInstance(document.getElementById('requestModal')).hide();
+        e.target.reset();
+        renderRequests();
+        showToast("Request submitted successfully!", "success");
+    });
+}
+
+// Phase 8: Notifications
+
+function showToast(message, type = 'info') {
+    const toastEl = document.getElementById('liveToast');
+    const toastStyling = document.getElementById('toast-styling');
+    const toastMessage = document.getElementById('toast-message');
+    const toastIcon = document.getElementById('toast-icon');
+    
+    if (!toastEl) return;
+
+    // Define background and text colors based on type
+    const colors = {
+        success: { bg: 'bg-success', text: 'text-white', icon: '✅' },
+        danger: { bg: 'bg-danger', text: 'text-white', icon: '❌' },
+        info: { bg: 'bg-info', text: 'text-dark', icon: '⚠️' }
+    };
+
+    const config = colors[type] || colors.info;
+
+    // Apply classes to the styling wrapper
+    toastStyling.className = `d-flex align-items-center p-1 rounded ${config.bg} ${config.text}`;
+    
+    // Set content
+    toastMessage.innerText = message;
+    toastIcon.innerText = config.icon;
+    
+    // Show the toast
+    const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
+    bsToast.show();
+}
+
+// Initialization: Startup
+
+function initApp() {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+        const user = window.db.accounts.find(u => u.email === token);
+        if (user && user.verified) {
+            setAuthState(true, user);
+        } else {
+            localStorage.removeItem('auth_token'); 
+        }
+    }
+    handleRouting();
+}
+
+
+window.addEventListener('hashchange', handleRouting);
+initApp();

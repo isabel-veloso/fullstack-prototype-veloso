@@ -24,3 +24,29 @@ body.authenticated .role-logged-out {
 body.is-admin .role-admin { 
     display: block; 
 }
+
+/* Custom Status Badges [cite: 195] */
+.badge-pending { background-color: #ffc107; color: #000; }
+.badge-approved { background-color: #198754; }
+.badge-rejected { background-color: #dc3545; }
+
+/* Table Styling */
+.table td {
+    vertical-align: middle;
+}
+
+/* Auth Logic: Hide/Show specific zones [cite: 57, 58] */
+body.not-authenticated .role-logged-in { display: none !important; }
+body.authenticated .role-logged-out { display: none !important; }
+
+/* Admin vs User Logic [cite: 58] */
+.role-admin { display: none; }
+body.is-admin .role-admin { display: block; }
+
+/* Dark mode nav link tweaks */
+.navbar-dark .nav-link {
+    color: rgba(255,255,255,0.7);
+}
+.navbar-dark .nav-link:hover {
+    color: white;
+}
