@@ -1,12 +1,5 @@
-// ==========================================
-// Phase 2: Core Routing & Auth Variables
-// ==========================================
 let currentUser = null;
 const STORAGE_KEY = 'ipt_demo_v1'; 
-
-// ==========================================
-// Phase 4: Data Persistence (Local Storage)
-// ==========================================
 
 window.db = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {
     accounts: [
@@ -24,14 +17,7 @@ function saveToStorage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(window.db));
 }
 
-// ==========================================
 // Phase 2 & 3: Routing & Auth State Management
-// ==========================================
-
-/**
- * handleRouting(): The "Bouncer".
- * We catch #/logout at the very beginning to fix the redirect issue.
- */
 function handleRouting() {
     const hash = window.location.hash || '#/';
     
@@ -133,10 +119,7 @@ function handleLogout() {
     showToast("Logged out successfully", "info");
 }
 
-// ==========================================
 // Phase 3: Registration & Login Logic
-// ==========================================
-
 const regForm = document.getElementById('register-form');
 if (regForm) {
     regForm.addEventListener('submit', (e) => {
@@ -189,22 +172,20 @@ if (loginForm) {
             setAuthState(true, user);
             
             // 1. Show the Toast first
-            showToast(`Welcome back, ${user.firstName}!`, "success");
+            showToast(`Hello, ${user.firstName}!`, "success");
             
             // 2. Delay the redirect slightly (100ms is enough to be invisible to users but helps JS)
             setTimeout(() => {
                 window.location.hash = '#/profile'; 
             }, 150);
+        }else{
+            showToast(`Login Unsucessful!`, "danger");
         }
     });
 }
 
-// ==========================================
 // Phase 6: Admin Management (Inline Forms)
-// ==========================================
-
 // --- Accounts ---
-
 function renderAccounts() {
     const tbody = document.getElementById('accounts-table-body');
     if (!tbody) return;
@@ -293,7 +274,7 @@ function resetPassword(id) {
 }
 
 function deleteAccount(id) {
-    // Requirement: Prevent self-deletion
+    //Prevent self-deletion
     if (currentUser && id === currentUser.id) {
         return showToast("Safety Error: You cannot delete the account you are currently logged into!", "danger");
     }
@@ -326,7 +307,8 @@ if (accForm) {
                 
                 const pass = document.getElementById('acc-password').value;
                 if (pass) acc.password = pass;
-                showToast("Account updated!", "success");
+                
+                showToast("Account updated successfully!", "success");
             }
         } else {
             // CREATE LOGIC
@@ -334,7 +316,7 @@ if (accForm) {
                 return showToast("Error: Email already exists.", "danger");
             }
 
-            window.db.accounts.push({
+            const newAccount = {
                 id: Date.now(),
                 firstName: document.getElementById('acc-firstname').value,
                 lastName: document.getElementById('acc-lastname').value,
@@ -342,13 +324,17 @@ if (accForm) {
                 password: document.getElementById('acc-password').value || "Password123!",
                 role: document.getElementById('acc-role').value,
                 verified: document.getElementById('acc-verified').checked
-            });
-            showToast("Account created!", "success");
+            };
+
+            window.db.accounts.push(newAccount);
+            showToast("Account added successfully!", "success");
         }
 
-        saveToStorage(); // Save to LocalStorage
-        renderAccounts(); // CRITICAL: Update the table view
-        toggleAccountForm(); // Hide the form card
+        // Final UI updates (Only run these once at the end)
+        saveToStorage(); 
+        renderAccounts(); 
+        toggleAccountForm(); 
+        e.target.reset(); // Clear the form fields
     });
 }
 
@@ -370,7 +356,6 @@ function renderDepartments() {
             </td>
         </tr>`).join('');
 }
-
 
 function removeDepartment(index) {
     if (confirm("Remove this department?")) {
@@ -457,10 +442,7 @@ if (eForm) {
     });
 }
 
-// ==========================================
 // Phase 5 & 7: User Content
-// ==========================================
-
 function renderProfile() {
     const container = document.getElementById('profile-page');
     if (!currentUser) return;
@@ -535,7 +517,6 @@ if (rForm) {
 }
 
 // Phase 8: Notifications
-
 function showToast(message, type = 'info') {
     const toastEl = document.getElementById('liveToast');
     const toastStyling = document.getElementById('toast-styling');
@@ -543,8 +524,6 @@ function showToast(message, type = 'info') {
     const toastIcon = document.getElementById('toast-icon');
     
     if (!toastEl) return;
-
-    // Define background and text colors based on type
     const colors = {
         success: { bg: 'bg-success', text: 'text-white', icon: '✅' },
         danger: { bg: 'bg-danger', text: 'text-white', icon: '❌' },
@@ -553,20 +532,16 @@ function showToast(message, type = 'info') {
 
     const config = colors[type] || colors.info;
 
-    // Apply classes to the styling wrapper
     toastStyling.className = `d-flex align-items-center p-1 rounded ${config.bg} ${config.text}`;
     
-    // Set content
     toastMessage.innerText = message;
     toastIcon.innerText = config.icon;
-    
-    // Show the toast
+
     const bsToast = new bootstrap.Toast(toastEl, { delay: 4000 });
     bsToast.show();
 }
 
 // Initialization: Startup
-
 function initApp() {
     const token = localStorage.getItem('auth_token');
     if (token) {
