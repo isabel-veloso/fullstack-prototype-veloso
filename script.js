@@ -340,7 +340,15 @@ if (accForm) {
 
 // --- Departments ---
 function toggleDeptForm() {
-    document.getElementById('dept-form-container').classList.toggle('d-none');
+    const container = document.getElementById('dept-form-container');
+    container.classList.toggle('d-none');
+    
+    // If we are closing the form, clear the edit mode data
+    if (container.classList.contains('d-none')) {
+        const form = document.getElementById('dept-form');
+        form.reset();
+        delete form.dataset.editIndex;
+    }
 }
 
 function renderDepartments() {
@@ -366,16 +374,48 @@ function removeDepartment(index) {
     }
 }
 
+function editDepartment(index) {
+    const dept = window.db.departments[index];
+    if (!dept) return;
+
+    // Pre-fill the form fields
+    document.getElementById('new-dept-name').value = dept.name;
+    document.getElementById('new-dept-desc').value = dept.desc;
+
+    // Store the index in the form so we know we are editing
+    const form = document.getElementById('dept-form');
+    form.dataset.editIndex = index;
+
+    // Show the form
+    toggleDeptForm();
+    
+    // Smooth scroll to form
+    document.getElementById('dept-form-container').scrollIntoView({ behavior: 'smooth' });
+}
+
 const dForm = document.getElementById('dept-form');
 if (dForm) {
     dForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        window.db.departments.push({
-            name: document.getElementById('new-dept-name').value,
-            desc: document.getElementById('new-dept-desc').value
-        });
+        
+        const name = document.getElementById('new-dept-name').value;
+        const desc = document.getElementById('new-dept-desc').value;
+        const editIndex = e.target.dataset.editIndex;
+
+        if (editIndex !== undefined && editIndex !== "") {
+            // UPDATE MODE
+            window.db.departments[editIndex] = { name, desc };
+            showToast("Department updated successfully!", "success");
+            
+            // Clear the index so the form resets to "Create" mode
+            delete e.target.dataset.editIndex;
+        } else {
+            // CREATE MODE
+            window.db.departments.push({ name, desc });
+            showToast("Department added successfully!", "success");
+        }
+
         saveToStorage();
-        showToast("Department added successfully!", "success");
         e.target.reset();
         toggleDeptForm();
         renderDepartments();
@@ -386,7 +426,13 @@ if (dForm) {
 function toggleEmployeeForm() {
     const container = document.getElementById('employee-form-container');
     container.classList.toggle('d-none');
-    if (!container.classList.contains('d-none')) {
+    
+    const form = document.getElementById('employee-form');
+    if (container.classList.contains('d-none')) {
+        form.reset();
+        delete form.dataset.editId;
+    } else {
+        // Populate departments dropdown whenever form opens
         const deptSelect = document.getElementById('emp-dept');
         deptSelect.innerHTML = window.db.departments.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
     }
@@ -405,8 +451,33 @@ function renderEmployees() {
             <td>${emp.name}</td>
             <td>${emp.position}</td>
             <td><span class="badge bg-secondary">${emp.dept}</span></td>
-            <td><button class="btn btn-sm btn-outline-danger" onclick="deleteEmployee('${emp.id}')">Remove</button></td>
+            <td>
+                <button class="btn btn-sm btn-outline-primary me-1" onclick="editEmployee('${emp.id}')">Edit</button>
+                <button class="btn btn-sm btn-outline-danger" onclick="deleteEmployee('${emp.id}')">Remove</button>
+            </td>
         </tr>`).join('');
+}
+
+function editEmployee(id) {
+    const emp = window.db.employees.find(e => e.id === id);
+    if (!emp) return;
+
+    // Pre-fill the form fields
+    document.getElementById('emp-id').value = emp.id;
+    document.getElementById('emp-email').value = emp.email;
+    document.getElementById('emp-position').value = emp.position;
+    document.getElementById('emp-hire-date').value = emp.hireDate;
+
+    // Store the ID in the form dataset so we know we are editing
+    const form = document.getElementById('employee-form');
+    form.dataset.editId = id;
+
+    // Show the form and set the department dropdown
+    toggleEmployeeForm();
+    document.getElementById('emp-dept').value = emp.dept;
+    
+    // Smooth scroll to form
+    document.getElementById('employee-form-container').scrollIntoView({ behavior: 'smooth' });
 }
 
 function deleteEmployee(id) {
@@ -422,20 +493,37 @@ const eForm = document.getElementById('employee-form');
 if (eForm) {
     eForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        
         const email = document.getElementById('emp-email').value;
+        const editId = e.target.dataset.editId;
         const account = window.db.accounts.find(a => a.email === email);
+
         if (!account) return showToast("Error: Account email not found!", "danger");
 
-        window.db.employees.push({
+        const employeeData = {
             id: document.getElementById('emp-id').value,
             name: `${account.firstName} ${account.lastName}`,
             email: email,
             position: document.getElementById('emp-position').value,
             dept: document.getElementById('emp-dept').value,
             hireDate: document.getElementById('emp-hire-date').value
-        });
+        };
+
+        if (editId) {
+            // UPDATE MODE: Find the index and replace the record
+            const index = window.db.employees.findIndex(emp => emp.id === editId);
+            if (index !== -1) {
+                window.db.employees[index] = employeeData;
+                showToast("Employee record updated!", "success");
+            }
+            delete e.target.dataset.editId; // Clear edit mode
+        } else {
+            // CREATE MODE: Add new record
+            window.db.employees.push(employeeData);
+            showToast("Employee record created!", "success");
+        }
+
         saveToStorage();
-        showToast("Employee record created!", "success");
         e.target.reset();
         toggleEmployeeForm();
         renderEmployees(); 
