@@ -2,7 +2,7 @@
 // Phase 2: Core Routing & Auth Variables
 // ==========================================
 let currentUser = null;
-const STORAGE_KEY = 'ipt_demo_v1'; // [cite: 598]
+const STORAGE_KEY = 'ipt_demo_v1';
 
 /**
  * navigateTo(hash): Requirement - Updates window.location.hash 
@@ -16,14 +16,14 @@ function navigateTo(hash) {
 // ==========================================
 
 /**
- * loadFromStorage(): Parses localStorage and seeds initial data if missing [cite: 599, 601]
+ * loadFromStorage(): Parses localStorage and seeds initial data if missing 
  */
 function loadFromStorage() {
     const data = localStorage.getItem(STORAGE_KEY);
     if (data) {
         window.db = JSON.parse(data);
     } else {
-        // Seeds with initial data [cite: 602, 603]
+        // Seeds with initial data 
         window.db = {
             accounts: [
                 { id: 1, firstName: 'Admin', lastName: 'User', email: 'admin@example.com', password: 'Password123!', role: 'admin', verified: true }
@@ -40,7 +40,7 @@ function loadFromStorage() {
 }
 
 function saveToStorage() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(window.db)); // [cite: 604]
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(window.db)); 
 }
 
 // ==========================================
@@ -48,21 +48,21 @@ function saveToStorage() {
 // ==========================================
 
 function handleRouting() {
-    const hash = window.location.hash || '#/'; // [cite: 555]
+    const hash = window.location.hash || '#/'; 
     
     if (hash === '#/logout') {
         handleLogout();
         return;
     }
 
-    // Reverse Bouncer: Redirect away from login/register if already authenticated [cite: 558]
+    // Reverse Bouncer: Redirect away from login/register if already authenticated 
     if (currentUser && (hash === '#/login' || hash === '#/register')) {
         navigateTo('#/profile');
         return;
     }
 
     const pages = document.querySelectorAll('.page');
-    pages.forEach(p => p.classList.remove('active')); // [cite: 556]
+    pages.forEach(p => p.classList.remove('active')); 
 
     const routeMap = {
         '#/': 'home-page',
@@ -73,17 +73,17 @@ function handleRouting() {
         '#/employees': 'employees-page',
         '#/accounts': 'accounts-page',
         '#/departments': 'departments-page',
-        '#/requests': 'requests-page'
+        '#/requests': 'requests-page',
     };
 
     const targetId = routeMap[hash] || 'home-page';
     const targetElement = document.getElementById(targetId);
+
+    const adminPages = ['#/employees', '#/accounts', '#/departments'];
+    const userPages = ['#/profile', '#/requests'];
     
     if (targetElement) {
-        // Protection Logic [cite: 558, 559]
-        const adminPages = ['#/employees', '#/accounts', '#/departments'];
-        const userPages = ['#/profile', '#/requests'];
-
+        // Protection Logic 
         if (userPages.includes(hash) && !currentUser) {
             navigateTo('#/login');
             return;
@@ -94,14 +94,16 @@ function handleRouting() {
             return;
         }
 
-        targetElement.classList.add('active'); // [cite: 557]
+        targetElement.classList.add('active'); 
 
-        // Trigger Renderers [cite: 612, 634]
+        // Trigger Renderers 
         if (hash === '#/profile') renderProfile();
         if (hash === '#/accounts') renderAccountsList(); 
         if (hash === '#/departments') renderDepartments();
         if (hash === '#/employees') renderEmployeesTable(); 
-        if (hash === '#/requests') renderRequests(); 
+        if (hash === '#/requests' || hash === '#/admin-requests') {
+            renderRequests();
+        }
     }
 }
 
@@ -109,13 +111,13 @@ function setAuthState(isAuth, user = null) {
     const body = document.body;
     const navName = document.getElementById('nav-user-name'); 
     
-    currentUser = user; // [cite: 589]
+    currentUser = user; 
     if (isAuth && user) {
-        body.classList.replace('not-authenticated', 'authenticated'); // [cite: 590]
-        if (user.role === 'admin') body.classList.add('is-admin'); // [cite: 591]
+        body.classList.replace('not-authenticated', 'authenticated'); 
+        if (user.role === 'admin') body.classList.add('is-admin'); 
         if (navName) navName.innerText = user.role === 'admin' ? "Admin" : user.firstName; 
     } else {
-        body.classList.replace('authenticated', 'not-authenticated'); // [cite: 590]
+        body.classList.replace('authenticated', 'not-authenticated'); 
         body.classList.remove('is-admin');
         if (navName) navName.innerText = "User";
         currentUser = null;
@@ -123,10 +125,10 @@ function setAuthState(isAuth, user = null) {
 }
 
 function handleLogout() {
-    localStorage.removeItem('auth_token'); // [cite: 593]
-    setAuthState(false); // [cite: 594]
+    localStorage.removeItem('auth_token'); 
+    setAuthState(false); 
     showToast("Logged out successfully", "info");
-    navigateTo('#/'); // [cite: 595]
+    navigateTo('#/'); 
 }
 
 // ==========================================
@@ -138,10 +140,10 @@ if (regForm) {
     regForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('reg-email').value;
-        if (window.db.accounts.find(a => a.email === email)) { // [cite: 568]
+        if (window.db.accounts.find(a => a.email === email)) {
             return showToast("Email already exists!", "danger");
         }
-        window.db.accounts.push({ // [cite: 569]
+        window.db.accounts.push({ 
             id: Date.now(),
             firstName: document.getElementById('reg-firstname').value,
             lastName: document.getElementById('reg-lastname').value,
@@ -151,19 +153,19 @@ if (regForm) {
             verified: false 
         });
         saveToStorage();
-        localStorage.setItem('unverified_email', email); // [cite: 569]
-        navigateTo('#/verify-email'); // [cite: 570]
+        localStorage.setItem('unverified_email', email); 
+        navigateTo('#/verify-email'); 
     });
 }
 
 function simulateVerification() {
-    const email = localStorage.getItem('unverified_email'); // [cite: 575]
+    const email = localStorage.getItem('unverified_email'); 
     const account = window.db.accounts.find(a => a.email === email);
     if (account) {
-        account.verified = true; // [cite: 576]
-        saveToStorage(); // [cite: 577]
+        account.verified = true; 
+        saveToStorage(); 
         showToast("Email verified!", "success");
-        navigateTo('#/login'); // [cite: 578]
+        navigateTo('#/login'); 
     }
 }
 
@@ -174,7 +176,7 @@ if (loginForm) {
         const emailInput = document.getElementById('login-email').value;
         const passwordInput = document.getElementById('login-password').value;
 
-        // Find matching verified account [cite: 582]
+        // Find matching verified account 
         const user = window.db.accounts.find(u => 
             u.email === emailInput && 
             u.password === passwordInput && 
@@ -182,12 +184,12 @@ if (loginForm) {
         );
 
         if (user) {
-            localStorage.setItem('auth_token', user.email); // [cite: 583]
-            setAuthState(true, user); // [cite: 584]
+            localStorage.setItem('auth_token', user.email);
+            setAuthState(true, user); 
             showToast(`Hello, ${user.firstName}!`, "success");
-            setTimeout(() => { navigateTo('#/profile'); }, 150); // [cite: 585]
+            setTimeout(() => { navigateTo('#/profile'); }, 150); 
         } else {
-            showToast("Invalid credentials or unverified email.", "danger"); // [cite: 586]
+            showToast("Invalid credentials or unverified email.", "danger"); 
         }
     });
 }
@@ -211,10 +213,10 @@ function renderAccountsList() { // Renamed per guide
                 <button class="btn btn-sm btn-outline-warning me-1" onclick="resetPassword(${acc.id})">Reset PW</button>
                 <button class="btn btn-sm btn-outline-danger" onclick="deleteAccount(${acc.id})">Delete</button>
             </td>
-        </tr>`).join(''); // [cite: 616]
+        </tr>`).join(''); 
 }
 
-function toggleAccountForm() { // [cite: 617]
+function toggleAccountForm() { 
     const container = document.getElementById('account-form-container');
     container.classList.toggle('d-none');
     if (container.classList.contains('d-none')) {
@@ -223,7 +225,7 @@ function toggleAccountForm() { // [cite: 617]
     }
 }
 
-function editAccount(id) { // [cite: 618]
+function editAccount(id) { 
     const acc = window.db.accounts.find(a => a.id === id);
     if (!acc) return;
     document.getElementById('acc-firstname').value = acc.firstName;
@@ -251,8 +253,8 @@ function resetPassword(id) {
 }
 
 function deleteAccount(id) {
-    if (currentUser && id === currentUser.id) return showToast("Cannot delete yourself!", "danger"); // [cite: 620]
-    if (confirm("Delete this account?")) { // [cite: 620]
+    if (currentUser && id === currentUser.id) return showToast("Cannot delete yourself!", "danger"); 
+    if (confirm("Delete this account?")) { 
         window.db.accounts = window.db.accounts.filter(a => a.id !== id);
         saveToStorage();
         renderAccountsList();
@@ -301,7 +303,7 @@ function toggleDeptForm() {
     }
 }
 
-function renderDepartments() { // [cite: 624]
+function renderDepartments() {
     const tableBody = document.getElementById('dept-list-body');
     if (!tableBody) return;
     tableBody.innerHTML = window.db.departments.map((dept, index) => `
@@ -312,7 +314,7 @@ function renderDepartments() { // [cite: 624]
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="editDepartment(${index})">Edit</button>
                 <button class="btn btn-sm btn-outline-danger" onclick="removeDepartment(${index})">Delete</button>
             </td>
-        </tr>`).join(''); // [cite: 622]
+        </tr>`).join(''); 
 }
 
 function removeDepartment(index) {
@@ -358,7 +360,7 @@ function renderEmployeesTable() { // Renamed per guide
     const tbody = document.getElementById('employees-table-body');
     if (!tbody) return;
     if (window.db.employees.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3">No employees.</td></tr>'; // [cite: 476]
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center py-3">No employees.</td></tr>'; 
         return;
     }
     tbody.innerHTML = window.db.employees.map(emp => `
@@ -371,14 +373,14 @@ function renderEmployeesTable() { // Renamed per guide
                 <button class="btn btn-sm btn-outline-primary me-1" onclick="editEmployee('${emp.id}')">Edit</button>
                 <button class="btn btn-sm btn-outline-danger" onclick="deleteEmployee('${emp.id}')">Remove</button>
             </td>
-        </tr>`).join(''); // [cite: 626]
+        </tr>`).join(''); 
 }
 
-function toggleEmployeeForm() { // [cite: 627]
+function toggleEmployeeForm() { 
     const container = document.getElementById('employee-form-container');
     container.classList.toggle('d-none');
     if (!container.classList.contains('d-none')) {
-        document.getElementById('emp-dept').innerHTML = window.db.departments.map(d => `<option value="${d.name}">${d.name}</option>`).join(''); // [cite: 631]
+        document.getElementById('emp-dept').innerHTML = window.db.departments.map(d => `<option value="${d.name}">${d.name}</option>`).join(''); 
     } else {
         document.getElementById('employee-form').reset();
         delete document.getElementById('employee-form').dataset.editId;
@@ -410,7 +412,7 @@ if (eForm) {
     eForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const email = document.getElementById('emp-email').value;
-        if (!window.db.accounts.find(a => a.email === email)) return showToast("Error: Account email not found!", "danger"); // [cite: 629]
+        if (!window.db.accounts.find(a => a.email === email)) return showToast("Error: Account email not found!", "danger"); 
 
         const empData = {
             id: document.getElementById('emp-id').value,
@@ -435,11 +437,62 @@ if (eForm) {
     });
 }
 
+function renderAdminRequests() {
+    const tbody = document.getElementById('admin-requests-table-body');
+    if (!tbody) return;
+
+    if (window.db.requests.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3">No requests found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = window.db.requests.map(req => {
+        const items = req.items.map(i => `${i.name} (${i.qty})`).join(', ');
+        const isPending = req.status === 'Pending';
+        
+        return `
+            <tr>
+                <td>${req.employeeEmail}</td>
+                <td>${req.date}</td>
+                <td>${req.type}</td>
+                <td><small>${items}</small></td>
+                <td><span class="badge ${getStatusBadge(req.status)}">${req.status}</span></td>
+                <td>
+                    ${isPending ? `
+                        <button class="btn btn-sm btn-success me-1" onclick="updateRequestStatus(${req.id}, 'Approved')">Approve</button>
+                        <button class="btn btn-sm btn-danger" onclick="updateRequestStatus(${req.id}, 'Rejected')">Reject</button>
+                    ` : '<span class="text-muted small">Processed</span>'}
+                </td>
+            </tr>`;
+    }).join('');
+}
+
+/**
+ * updateRequestStatus(): Changes status and saves to storage
+ */
+function updateRequestStatus(requestId, newStatus) {
+    const request = window.db.requests.find(r => r.id === requestId);
+    if (request) {
+        request.status = newStatus;
+        saveToStorage();
+        renderAdminRequests(); // Refresh the table
+        showToast(`Request ${newStatus}!`, newStatus === 'Approved' ? "success" : "danger");
+    }
+}
+
+// Helper to get badge colors
+function getStatusBadge(status) {
+    if (status === 'Approved') return 'bg-success';
+    if (status === 'Rejected') return 'bg-danger';
+    return 'bg-warning text-dark';
+}
+
+
 // ==========================================
 // Phase 5 & 7: User Content
 // ==========================================
 
-function renderProfile() { // [cite: 609]
+function renderProfile() { 
     const container = document.getElementById('profile-page');
     if (!currentUser) return;
     container.innerHTML = `
@@ -451,32 +504,97 @@ function renderProfile() { // [cite: 609]
                 <strong>Role:</strong> ${currentUser.role}</p>
                 <button class="btn btn-outline-primary btn-sm" onclick="showToast('Feature not implemented yet', 'info')">Edit Profile</button>
             </div>
-        </div>`; // [cite: 610, 611]
+        </div>`; 
 }
 
 function renderRequests() {
-    const tableContainer = document.getElementById('requests-table-container');
+    const title = document.getElementById('requests-page-title');
+    const tableHeader = document.getElementById('requests-table-header');
     const tableBody = document.getElementById('requests-table-body');
-    const myData = window.db.requests.filter(r => r.employeeEmail === currentUser.email); // [cite: 637]
-    
-    document.getElementById('empty-requests-view').style.display = myData.length === 0 ? 'block' : 'none';
-    tableContainer.style.display = myData.length === 0 ? 'none' : 'block';
+    const btnNew = document.getElementById('btn-new-request');
+    const container = document.getElementById('requests-table-container');
+    const emptyView = document.getElementById('empty-requests-view');
 
-    if (tableBody) {
-        tableBody.innerHTML = myData.map(req => {
-            const badge = req.status === 'Approved' ? 'bg-success' : req.status === 'Rejected' ? 'bg-danger' : 'bg-warning'; // [cite: 643]
-            const items = req.items.map(i => `${i.name} (${i.qty})`).join(', ');
-            return `<tr><td>${req.date}</td><td>${req.type}</td><td><small>${items}</small></td>
-                    <td><span class="badge ${badge}">${req.status}</span></td></tr>`;
-        }).join('');
+    if (!currentUser || !tableBody) return;
+
+    const isAdmin = currentUser.role === 'admin';
+    
+    // 1. Setup UI elements based on role
+    title.innerText = isAdmin ? "Manage User Requests" : "My Requests";
+    btnNew.style.display = isAdmin ? "none" : "block"; // Admin doesn't create requests here
+
+    // 2. Define Table Headers
+    tableHeader.innerHTML = `
+        ${isAdmin ? '<th>User</th>' : ''}
+        <th>Date</th>
+        <th>Type</th>
+        <th>Items</th>
+        <th>Status</th>
+        ${isAdmin ? '<th>Actions</th>' : ''}
+    `;
+
+    // 3. Filter Data: Admin sees all, User sees only theirs
+    const displayData = isAdmin 
+        ? window.db.requests 
+        : window.db.requests.filter(r => r.employeeEmail === currentUser.email);
+
+    // 4. Handle Empty State
+    if (displayData.length === 0) {
+        container.style.display = 'none';
+        emptyView.style.display = 'block';
+        return;
     }
+
+    container.style.display = 'block';
+    emptyView.style.display = 'none';
+
+    // 5. Render Rows
+    tableBody.innerHTML = displayData.map(req => {
+        const items = req.items.map(i => `${i.name} (${i.qty})`).join(', ');
+        const badge = getStatusBadge(req.status);
+        
+        return `
+            <tr>
+                ${isAdmin ? `<td><strong>${req.employeeEmail}</strong></td>` : ''}
+                <td>${req.date}</td>
+                <td>${req.type}</td>
+                <td><small>${items}</small></td>
+                <td><span class="badge ${badge}">${req.status}</span></td>
+                ${isAdmin ? `
+                    <td>
+                        ${req.status === 'Pending' ? `
+                            <button class="btn btn-sm btn-success" onclick="updateRequestStatus(${req.id}, 'Approved')">Approve</button>
+                            <button class="btn btn-sm btn-danger" onclick="updateRequestStatus(${req.id}, 'Rejected')">Reject</button>
+                        ` : '<span class="text-muted small">Finalized</span>'}
+                    </td>
+                ` : ''}
+            </tr>`;
+    }).join('');
+}
+
+// Logic to update status
+function updateRequestStatus(id, newStatus) {
+    const req = window.db.requests.find(r => r.id === id);
+    if (req) {
+        req.status = newStatus;
+        saveToStorage();
+        renderRequests(); // Re-render the same page
+        showToast(`Request ${newStatus}`, "info");
+    }
+}
+
+// Helper for colors
+function getStatusBadge(status) {
+    if (status === 'Approved') return 'bg-success';
+    if (status === 'Rejected') return 'bg-danger';
+    return 'bg-warning text-dark';
 }
 
 // Requisition Builder logic
 document.addEventListener('click', (e) => {
     const container = document.getElementById('dynamic-items-container');
     if (!container) return;
-    if (e.target.classList.contains('add-item-btn')) { // [cite: 640]
+    if (e.target.classList.contains('add-item-btn')) { 
         e.preventDefault();
         const newRow = document.createElement('div');
         newRow.className = 'input-group mb-2 item-row';
@@ -485,7 +603,7 @@ document.addEventListener('click', (e) => {
             <button type="button" class="btn btn-outline-danger remove-item-btn">×</button>`;
         container.appendChild(newRow);
     }
-    if (e.target.classList.contains('remove-item-btn')) e.target.closest('.item-row').remove(); // [cite: 640]
+    if (e.target.classList.contains('remove-item-btn')) e.target.closest('.item-row').remove(); 
 });
 
 const rForm = document.getElementById('new-request-form');
@@ -497,9 +615,9 @@ if (rForm) {
             qty: row.querySelector('.item-qty').value
         }));
         
-        if (items.length === 0) return showToast("Add at least one item!", "danger"); // 
+        if (items.length === 0) return showToast("Add at least one item!", "danger"); 
 
-        window.db.requests.push({ // [cite: 642]
+        window.db.requests.push({ 
             id: Date.now(),
             date: new Date().toLocaleDateString(),
             type: document.getElementById('req-type').value,
@@ -507,7 +625,7 @@ if (rForm) {
             status: 'Pending',
             employeeEmail: currentUser.email
         });
-        saveToStorage(); // [cite: 606]
+        saveToStorage(); 
         bootstrap.Modal.getInstance(document.getElementById('requestModal')).hide();
         e.target.reset();
         renderRequests();
@@ -519,7 +637,7 @@ if (rForm) {
 // Phase 8: Notifications & Init
 // ==========================================
 
-function showToast(message, type = 'info') { // [cite: 652]
+function showToast(message, type = 'info') { 
     const toastEl = document.getElementById('liveToast');
     const toastStyling = document.getElementById('toast-styling');
     if (!toastEl) return;
@@ -532,7 +650,7 @@ function showToast(message, type = 'info') { // [cite: 652]
 }
 
 function initApp() {
-    loadFromStorage(); // [cite: 605]
+    loadFromStorage(); 
     const token = localStorage.getItem('auth_token');
     if (token) {
         const user = window.db.accounts.find(u => u.email === token);
@@ -541,5 +659,5 @@ function initApp() {
     handleRouting();
 }
 
-window.addEventListener('hashchange', handleRouting); // [cite: 560]
+window.addEventListener('hashchange', handleRouting); 
 initApp();
